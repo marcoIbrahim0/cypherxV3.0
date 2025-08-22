@@ -19,7 +19,8 @@ services:
     networks:
       - cursor-network
     ports:
-      - "3000:3000"
+      - "3000:3000"  # Web interface
+      - "5000:5000"  # API server
 
   cloudflared:
     image: cloudflare/cloudflared:latest

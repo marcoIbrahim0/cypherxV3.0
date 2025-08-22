@@ -1,10 +1,16 @@
-tunnel: cypherx-cursor-cli
+tunnel: d5942038-e758-46cc-9a4d-23224e7d40f2
 credentials-file: /etc/cloudflared/credentials.json
 
 ingress:
   # Cursor Headless CLI service
-  - hostname: cursor-cli.your-domain.com
+  - hostname: cursor-cli.valensjewelry.com
     service: http://cursor-headless-cli:3000
+    originRequest:
+      noTLSVerify: true
+  
+  # API server for iOS app
+  - hostname: api.valensjewelry.com
+    service: http://cursor-headless-cli:5000
     originRequest:
       noTLSVerify: true
   

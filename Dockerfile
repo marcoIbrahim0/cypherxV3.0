@@ -38,11 +38,18 @@ USER cursor
 # Copy web interface
 COPY --chown=cursor:cursor web-interface.html /workspace/index.html
 
-# Install a simple HTTP server
-RUN pip3 install --user http-server
+# Install a simple HTTP server locally
+RUN npm install http-server
+
+# Install Python dependencies for API server
+COPY --chown=cursor:cursor requirements.txt /workspace/
+RUN pip3 install --user -r requirements.txt
+
+# Copy API server
+COPY --chown=cursor:cursor api-server.py /workspace/
 
 # Expose port for the agent (if needed)
 EXPOSE 3000
 
-# Default command to start the headless agent and serve web interface
-CMD ["sh", "-c", "python3 -m http.server 3000 & cursor-agent"]
+# Default command to start API server, http-server, and cursor-agent
+CMD ["sh", "-c", "python3 api-server.py & npx http-server -p 3000 & cursor-agent"]
