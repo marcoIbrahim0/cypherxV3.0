@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  cursor-headless:
+    build: .
+    container_name: cursor-headless-cli
+    volumes:
+      - .:/workspace
+      - cursor-data:/tmp/cursor-headless
+      - ~/.gitconfig:/home/cursor/.gitconfig:ro
+      - ~/.ssh:/home/cursor/.ssh:ro
+    environment:
+      - CURSOR_API_KEY=${CURSOR_API_KEY:-}
+      - HOME=/home/cursor
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    networks:
+      - cursor-network
+
+volumes:
+  cursor-data:
+    driver: local
+
+networks:
+  cursor-network:
+    driver: bridge
