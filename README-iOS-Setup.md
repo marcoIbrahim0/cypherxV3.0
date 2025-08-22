@@ -26,7 +26,7 @@ To make your Cursor CLI work in an iOS app, you need:
 ### 2. Add DNS Records
 In your Cloudflare dashboard, add:
 - **Hostname**: `api.valensjewelry.com`
-- **Service**: `http://192.168.1.9:5000`
+- **Service**: `http://192.168.1.9:5001`
 
 ### 3. Test API Endpoints
 ```bash
@@ -93,7 +93,7 @@ KeychainManager.saveAPIKey("your_api_key_here")
 ### 1. Test Local API
 ```bash
 # Check if API server is running
-curl http://localhost:5000/api/health
+curl http://localhost:5001/api/health
 ```
 
 ### 2. Test Public API
