@@ -37,6 +37,19 @@ class CursorCLISession:
         self.last_activity = datetime.now()
         self.process = None
         self.status = "created"
+        self.current_model = "gpt-4"  # Default model
+        self.available_models = [
+            "gpt-4",
+            "gpt-4-turbo", 
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-3.5-turbo",
+            "claude-3-opus",
+            "claude-3-sonnet",
+            "claude-3-haiku",
+            "gemini-pro",
+            "gemini-flash"
+        ]
         
     def start_cli(self):
         """Start the Cursor CLI process"""
@@ -74,6 +87,23 @@ class CursorCLISession:
             self.status = "stopped"
             self.last_activity = datetime.now()
             logger.info(f"Stopped CLI session {self.session_id}")
+    
+    def change_model(self, new_model):
+        """Change the AI model for this session"""
+        if new_model not in self.available_models:
+            return False, f"Model '{new_model}' not available. Available models: {', '.join(self.available_models)}"
+        
+        self.current_model = new_model
+        self.last_activity = datetime.now()
+        logger.info(f"Changed model to {new_model} for session {self.session_id}")
+        return True, f"Model changed to {new_model}"
+    
+    def get_model_info(self):
+        """Get current model and available models"""
+        return {
+            'current_model': self.current_model,
+            'available_models': self.available_models
+        }
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -146,7 +176,8 @@ def cli_status():
         'status': cli_session.status,
         'created_at': cli_session.created_at.isoformat(),
         'last_activity': cli_session.last_activity.isoformat(),
-        'uptime': (datetime.now() - cli_session.created_at).total_seconds() if cli_session.created_at else 0
+        'uptime': (datetime.now() - cli_session.created_at).total_seconds() if cli_session.created_at else 0,
+        'current_model': cli_session.current_model
     })
 
 @app.route('/api/cli/stop', methods=['POST'])
@@ -202,11 +233,47 @@ def list_sessions():
                 'session_id': s.session_id,
                 'status': s.status,
                 'created_at': s.created_at.isoformat(),
-                'last_activity': s.last_activity.isoformat()
+                'last_activity': s.last_activity.isoformat(),
+                'current_model': s.current_model
             }
             for s in active_sessions.values()
         ]
     })
+
+@app.route('/api/models', methods=['GET'])
+def get_models():
+    """Get available models and current model for the session"""
+    session_id = session.get('session_id')
+    if not session_id or session_id not in active_sessions:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    cli_session = active_sessions[session_id]
+    return jsonify(cli_session.get_model_info())
+
+@app.route('/api/models/change', methods=['POST'])
+def change_model():
+    """Change the AI model for the current session"""
+    session_id = session.get('session_id')
+    if not session_id or session_id not in active_sessions:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    data = request.get_json()
+    new_model = data.get('model')
+    
+    if not new_model:
+        return jsonify({'error': 'Model parameter required'}), 400
+    
+    cli_session = active_sessions[session_id]
+    success, message = cli_session.change_model(new_model)
+    
+    if success:
+        return jsonify({
+            'message': message,
+            'current_model': cli_session.current_model,
+            'available_models': cli_session.available_models
+        })
+    else:
+        return jsonify({'error': message}), 400
 
 @app.route('/api/logout', methods=['POST'])
 def logout():

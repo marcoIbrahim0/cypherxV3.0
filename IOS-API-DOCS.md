@@ -106,6 +106,56 @@ Send a message to the Cursor CLI.
 }
 ```
 
+### Model Management
+
+#### GET `/api/models`
+Get available models and current model for the session.
+
+**Response:**
+```json
+{
+  "current_model": "gpt-4",
+  "available_models": [
+    "gpt-4",
+    "gpt-4-turbo",
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-3.5-turbo",
+    "claude-3-opus",
+    "claude-3-sonnet",
+    "claude-3-haiku",
+    "gemini-pro",
+    "gemini-flash"
+  ]
+}
+```
+
+#### POST `/api/models/change`
+Change the AI model for the current session.
+
+**Request Body:**
+```json
+{
+  "model": "claude-3-sonnet"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Model changed to claude-3-sonnet",
+  "current_model": "claude-3-sonnet",
+  "available_models": ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku", "gemini-pro", "gemini-flash"]
+}
+```
+
+**Error Response (Invalid Model):**
+```json
+{
+  "error": "Model 'invalid-model' not available. Available models: gpt-4, gpt-4-turbo, gpt-4o, gpt-4o-mini, gpt-3.5-turbo, claude-3-opus, claude-3-sonnet, claude-3-haiku, gemini-pro, gemini-flash"
+}
+```
+
 ### Session Management
 
 #### POST `/api/logout`
@@ -161,6 +211,36 @@ class CursorAPIClient {
         let (data, _) = try await URLSession.shared.data(for: request)
         return try JSONDecoder().decode(ChatResponse.self, from: data)
     }
+    
+    func getModels() async throws -> ModelsResponse {
+        guard let sessionID = sessionID else {
+            throw APIError.notAuthenticated
+        }
+        
+        let url = URL(string: "\(baseURL)/models")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(ModelsResponse.self, from: data)
+    }
+    
+    func changeModel(_ model: String) async throws -> ModelChangeResponse {
+        guard let sessionID = sessionID else {
+            throw APIError.notAuthenticated
+        }
+        
+        let url = URL(string: "\(baseURL)/models/change")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["model": model]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(ModelChangeResponse.self, from: data)
+    }
 }
 ```
 
@@ -193,6 +273,28 @@ struct ChatResponse: Codable {
     let message: String
     let response: String
     let timestamp: String
+}
+
+struct ModelsResponse: Codable {
+    let currentModel: String
+    let availableModels: [String]
+    
+    enum CodingKeys: String, CodingKey {
+        case currentModel = "current_model"
+        case availableModels = "available_models"
+    }
+}
+
+struct ModelChangeResponse: Codable {
+    let message: String
+    let currentModel: String
+    let availableModels: [String]
+    
+    enum CodingKeys: String, CodingKey {
+        case message
+        case currentModel = "current_model"
+        case availableModels = "available_models"
+    }
 }
 
 enum APIError: Error {
@@ -263,6 +365,8 @@ class CursorViewModel: ObservableObject {
     @Published var cliStatus = "disconnected"
     @Published var messages: [ChatMessage] = []
     @Published var showLogin = false
+    @Published var currentModel = "gpt-4"
+    @Published var availableModels: [String] = []
     
     private let apiClient = CursorAPIClient()
     
@@ -308,6 +412,14 @@ class CursorViewModel: ObservableObject {
         } catch {
             print("Failed to send message: \(error)")
         }
+    }
+    
+    func getModels() async throws -> ModelsResponse {
+        return try await apiClient.getModels()
+    }
+    
+    func changeModel(_ model: String) async throws -> ModelChangeResponse {
+        return try await apiClient.changeModel(model)
     }
 }
 
@@ -376,12 +488,18 @@ class KeychainManager {
 ### 1. Test API Endpoints
 ```bash
 # Test health endpoint
-curl https://your-domain.com:5000/api/health
+curl https://your-domain.com:5001/api/health
 
 # Test login
-curl -X POST https://your-domain.com:5000/api/auth/login \
+curl -X POST https://your-domain.com:5001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"api_key":"your_api_key"}'
+
+# Test model management
+curl -b cookies.txt https://your-domain.com:5001/api/models
+curl -b cookies.txt -X POST https://your-domain.com:5001/api/models/change \
+  -H "Content-Type: application/json" \
+  -d '{"model":"claude-3-sonnet"}'
 ```
 
 ### 2. Test iOS App
