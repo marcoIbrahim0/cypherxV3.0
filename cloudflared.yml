@@ -1,0 +1,12 @@
+tunnel: cypherx-cursor-cli
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  # Cursor Headless CLI service
+  - hostname: cursor-cli.your-domain.com
+    service: http://cursor-headless-cli:3000
+    originRequest:
+      noTLSVerify: true
+  
+  # Fallback rule - must be last
+  - service: http_status:404

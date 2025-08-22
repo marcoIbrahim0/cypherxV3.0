@@ -35,8 +35,14 @@ RUN chown -R cursor:cursor /workspace
 # Switch back to cursor user
 USER cursor
 
+# Copy web interface
+COPY --chown=cursor:cursor web-interface.html /workspace/index.html
+
+# Install a simple HTTP server
+RUN pip3 install --user http-server
+
 # Expose port for the agent (if needed)
 EXPOSE 3000
 
-# Default command to start the headless agent
-CMD ["cursor-agent"]
+# Default command to start the headless agent and serve web interface
+CMD ["sh", "-c", "python3 -m http.server 3000 & cursor-agent"]

@@ -18,6 +18,21 @@ services:
     restart: unless-stopped
     networks:
       - cursor-network
+    ports:
+      - "3000:3000"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared.yml:/etc/cloudflared/config.yml:ro
+      - ./cloudflared-credentials.json:/etc/cloudflared/credentials.json:ro
+    networks:
+      - cursor-network
+    depends_on:
+      - cursor-headless
 
 volumes:
   cursor-data:
