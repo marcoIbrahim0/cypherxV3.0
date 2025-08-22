@@ -45,6 +45,21 @@ The script will:
 - Set up DNS records
 - Configure everything automatically
 
+### Step 3: Configure Service URLs (IMPORTANT!)
+
+**⚠️ Critical Step**: After setting up the tunnel, you MUST update the service URLs in your Cloudflare dashboard:
+
+1. **Go to**: [dash.cloudflare.com](https://dash.cloudflare.com) → Zero Trust → Tunnels → [Your Tunnel Name]
+2. **Click**: "Public hostnames" tab
+3. **For each hostname**, set the URL to: `http://YOUR_MACHINE_IP:3000`
+
+**Example**:
+- **Hostname**: `cursor-cli.yourdomain.com`
+- **URL**: `http://192.168.1.9:3000` (replace with your actual IP)
+
+**❌ Don't use**: `localhost:3000` or `cursor-headless-cli:3000`  
+**✅ Use**: `http://YOUR_MACHINE_IP:3000`
+
 ### Step 3: Start Services
 
 ```bash
@@ -56,6 +71,30 @@ The script will:
 ### Step 4: Access Your Public Cursor CLI
 
 Visit your public URL (e.g., `https://cursor-cli.yourdomain.com`) to see the web interface!
+
+## 🧪 Testing & Verification
+
+### Test Local Service First
+```bash
+# Check if local service is running
+curl -I http://localhost:3000
+
+# Check if tunnel is running
+./cursor-docker.sh tunnel
+
+# Check container status
+./cursor-docker.sh status
+```
+
+### Test Public Access
+1. **Wait 1-2 minutes** after updating Cloudflare dashboard
+2. **Test your public URL**: `https://cursor-cli.yourdomain.com`
+3. **Expected result**: Beautiful Cursor CLI web interface
+
+### Common Test Results
+- **Error 1016**: Service URL not configured correctly
+- **Error 502**: Using wrong service URL (localhost instead of IP)
+- **Success**: Beautiful web interface loads
 
 ## 🔧 Manual Setup (Alternative)
 
@@ -104,6 +143,32 @@ cloudflared tunnel token <TUNNEL_ID> > cloudflared-credentials.json
 ### 6. Update Configuration
 
 Edit `cloudflared.yml` and replace `cursor-cli.your-domain.com` with your actual hostname.
+
+### 7. Configure Service URLs (CRITICAL!)
+
+**⚠️ IMPORTANT**: You must configure the service URLs in your Cloudflare dashboard:
+
+1. **Go to**: [dash.cloudflare.com](https://dash.cloudflare.com) → Zero Trust → Tunnels → [Your Tunnel Name]
+2. **Click**: "Public hostnames" tab
+3. **For each hostname**, configure:
+   - **Hostname**: `cursor-cli.yourdomain.com`
+   - **Path**: `/`
+   - **Type**: `HTTP`
+   - **URL**: `http://YOUR_MACHINE_IP:3000`
+
+**Get Your Machine IP**:
+```bash
+ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -1
+```
+
+**Example Configuration**:
+- **Hostname**: `cursor-cli.valensjewelry.com`
+- **URL**: `http://192.168.1.9:3000`
+
+**❌ Common Mistakes**:
+- Using `localhost:3000` (won't work from tunnel)
+- Using `cursor-headless-cli:3000` (Docker service names don't resolve)
+- Using `127.0.0.1:3000` (same as localhost issue)
 
 ## 🌐 Domain Options
 
@@ -167,6 +232,34 @@ cat cloudflared.yml
 
 # Check logs
 ./cursor-docker.sh tunnel
+```
+
+#### 2. Error 1016: Origin DNS Error
+**Problem**: Cloudflare can't resolve the service URL  
+**Solution**: Update the service URL in Cloudflare dashboard to use your machine's IP address
+
+```bash
+# Get your machine's IP address
+ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -1
+
+# Use this IP in Cloudflare dashboard
+# Example: http://192.168.1.9:3000
+```
+
+#### 3. Error 502: Bad Gateway
+**Problem**: Tunnel connects but can't reach your local service  
+**Solution**: 
+- ❌ Don't use: `localhost:3000` or `cursor-headless-cli:3000`
+- ✅ Use: `http://YOUR_MACHINE_IP:3000`
+
+#### 4. Invalid JSON Credentials
+**Problem**: `cloudflared-credentials.json` contains invalid JSON  
+**Solution**: Regenerate the credentials file
+
+```bash
+# Remove old file and regenerate
+rm cloudflared-credentials.json
+cloudflared tunnel token --cred-file cloudflared-credentials.json YOUR_TUNNEL_ID
 ```
 
 #### 2. DNS Not Resolving
@@ -290,6 +383,36 @@ If you encounter issues:
 3. Check Docker container status
 4. Open an issue on GitHub
 5. Join the Cursor community
+
+## 📋 Quick Reference
+
+### Essential Commands
+```bash
+# Start services
+./cursor-docker.sh start
+
+# Check status
+./cursor-docker.sh status
+
+# View tunnel logs
+./cursor-docker.sh tunnel
+
+# Get machine IP
+ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -1
+```
+
+### Critical Configuration
+- **Service URL**: Must use `http://YOUR_MACHINE_IP:3000`
+- **Don't use**: `localhost:3000` or Docker service names
+- **Tunnel**: Must be running and connected
+- **DNS**: Must be configured in Cloudflare dashboard
+
+### Success Checklist
+- [ ] Tunnel is running (`./cursor-docker.sh tunnel`)
+- [ ] Local service accessible (`curl localhost:3000`)
+- [ ] Service URL configured with machine IP
+- [ ] DNS record created in Cloudflare
+- [ ] Public URL loads web interface
 
 ---
 
